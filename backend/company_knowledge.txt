@@ -1,0 +1,12 @@
+Company working hours are 9 AM to 6 PM, Monday to Friday.
+Employees receive 12 casual leaves per year.
+Employees receive 10 sick leaves per year.
+Employees can work from home twice per week with manager approval.
+The IT support email is support@company.com.
+The HR support email is hr@company.com.
+New employees get a laptop and access badge within the first 3 days.
+Payroll is processed on the last working day of every month.
+The notice period for resignation is 30 days.
+Employees are eligible for health insurance after 90 days of employment.
+The office is closed on all national holidays and has 2 additional floating holidays per year.
+Expense reimbursements are processed within 15 working days of submission.

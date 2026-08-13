@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Company Chatbot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #f4f5f7; }
+  #root { height: 100vh; }
+  .app { display: flex; height: 100%; }
+
+  .sidebar { width: 280px; background: #1e1e2e; color: #eee; display: flex; flex-direction: column; }
+  .sidebar-header { padding: 16px; }
+  .new-chat-btn { width: 100%; padding: 10px; background: #4f6df5; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .new-chat-btn:hover { background: #3d59e0; }
+  .search-box { margin: 0 16px 12px; padding: 8px 10px; border-radius: 8px; border: none; background: #2c2c3d; color: #eee; width: calc(100% - 32px); }
+  .search-box::placeholder { color: #999; }
+  .chat-list { flex: 1; overflow-y: auto; padding: 0 8px; }
+  .chat-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat-item:hover { background: #2c2c3d; }
+  .chat-item.active { background: #4f6df5; }
+
+  .main { flex: 1; display: flex; flex-direction: column; }
+  .header { padding: 14px 20px; border-bottom: 1px solid #e2e2e8; background: white; font-weight: 600; }
+  .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .msg { max-width: 70%; padding: 10px 14px; border-radius: 12px; line-height: 1.4; font-size: 14px; white-space: pre-wrap; }
+  .msg.user { align-self: flex-end; background: #4f6df5; color: white; border-bottom-right-radius: 2px; }
+  .msg.assistant { align-self: flex-start; background: white; border: 1px solid #e2e2e8; border-bottom-left-radius: 2px; }
+  .knowledge-used { font-size: 11px; color: #888; margin-top: 4px; }
+
+  .input-bar { display: flex; gap: 8px; padding: 16px; border-top: 1px solid #e2e2e8; background: white; }
+  .input-bar input { flex: 1; padding: 12px 14px; border-radius: 10px; border: 1px solid #d8d8e0; font-size: 14px; }
+  .input-bar button { padding: 12px 20px; background: #4f6df5; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; }
+  .input-bar button:disabled { background: #b7c1f5; cursor: not-allowed; }
+
+  .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: #999; font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const API_BASE = "http://localhost:8000";
+
+function App() {
+  const [conversations, setConversations] = useState([]);
+  const [activeId, setActiveId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => { loadConversations(); }, []);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  async function loadConversations() {
+    try {
+      const res = await fetch(`${API_BASE}/conversations`);
+      if (!res.ok) throw new Error('Failed to load conversations');
+      const data = await res.json();
+      setConversations(data);
+    } catch (err) {
+      console.error('Could not load conversations:', err);
+      setConversations([]);
+    }
+  }
+
+  async function handleNewChat() {
+    try {
+      const res = await fetch(`${API_BASE}/conversations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New Chat" }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Create conversation failed:', data);
+        alert(data.detail || 'Failed to create conversation');
+        return;
+      }
+
+      await loadConversations();
+      setActiveId(data.conversation_id);
+      setMessages([]);
+    } catch (err) {
+      console.error('Error creating conversation:', err);
+      alert('Could not create conversation — is the backend running?');
+    }
+  }
+
+  async function openConversation(id) {
+    setActiveId(id);
+    const res = await fetch(`${API_BASE}/conversations/${id}`);
+    const data = await res.json();
+    setMessages(data.messages || []);
+  }
+
+  async function handleSearch(term) {
+    setSearchTerm(term);
+    if (!term.trim()) { loadConversations(); return; }
+    const res = await fetch(`${API_BASE}/conversations/search?q=${encodeURIComponent(term)}`);
+    const data = await res.json();
+    setConversations(data);
+  }
+
+  async function handleDeleteChat(id) {
+
+    const confirmed = window.confirm(
+        "Are you sure you want to delete this chat?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+
+        const res = await fetch(
+            `${API_BASE}/conversations/${id}`,
+            {
+                method: "DELETE"
+            }
+        );
+
+        if (!res.ok) {
+            const data = await res.json();
+            alert(data.detail || "Failed to delete chat");
+            return;
+        }
+
+        // If deleting the currently open chat
+        if (id === activeId) {
+            setActiveId(null);
+            setMessages([]);
+        }
+
+        // Refresh sidebar
+        await loadConversations();
+
+    } catch (error) {
+
+        console.error("Delete error:", error);
+
+        alert("Could not delete the chat.");
+    }
+}
+
+  async function handleSend() {
+    if (!input.trim() || !activeId || sending) return;
+
+    const question = input.trim();
+    setInput("");
+    setSending(true);
+
+    // Show user's message immediately
+    setMessages((prev) => [
+        ...prev,
+        {
+            role: "user",
+            content: question,
+            timestamp: ""
+        }
+    ]);
+
+    try {
+        const res = await fetch(
+            `${API_BASE}/conversations/${activeId}/messages`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    content: question
+                })
+            }
+        );
+
+        const data = await res.json();
+
+        // IMPORTANT:
+        // Check whether FastAPI returned an error
+        if (!res.ok) {
+            console.error("Backend error:", data);
+
+            const errorMessage =
+                data.detail || "Something went wrong on the server.";
+
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    content: `Error: ${errorMessage}`
+                }
+            ]);
+
+            return;
+        }
+
+        // Successful response
+        console.log("Backend response:", data);
+
+        setMessages((prev) => [
+            ...prev,
+            data.assistant_message
+        ]);
+
+        // Refresh sidebar because conversation title may have changed
+        await loadConversations();
+
+    } catch (e) {
+
+        console.error("Request failed:", e);
+
+        setMessages((prev) => [
+            ...prev,
+            {
+                role: "assistant",
+                content: "Error: Could not reach the backend server."
+            }
+        ]);
+
+    } finally {
+        setSending(false);
+    }
+}
+
+  return (
+    <div className="app">
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <button className="new-chat-btn" onClick={handleNewChat}>+ New Chat</button>
+        </div>
+        <input
+          className="search-box"
+          placeholder="Search chats..."
+          value={searchTerm}
+          onChange={(e) => handleSearch(e.target.value)}
+        />
+        <div className="chat-list">
+          {conversations.map((c) => (
+    <div
+        key={c.conversation_id}
+        className={"chat-item" + (c.conversation_id === activeId ? " active" : "")}
+        onClick={() => openConversation(c.conversation_id)}
+    >
+        <span>{c.title}</span>
+
+        <button
+            onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteChat(c.conversation_id);
+            }}
+            style={{
+                float: "right",
+                border: "none",
+                background: "transparent",
+                color: "#ccc",
+                cursor: "pointer",
+                fontSize: "14px"
+            }}
+        >
+            🗑
+        </button>
+    </div>
+))}
+        </div>
+      </div>
+
+      <div className="main">
+        <div className="header">Company Chatbot</div>
+        
+        {activeId ? (
+          <React.Fragment>
+            <div className="messages">
+              {messages.map((m, i) => (
+                <div key={i} className={"msg " + m.role}>{m.content}</div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+            <div className="input-bar">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                placeholder="Ask something..."
+                disabled={sending}
+              />
+              <button onClick={handleSend} disabled={sending}>
+                {sending ? "..." : "Send"}
+              </button>
+            </div>
+          </React.Fragment>
+        ) : (
+          <div className="empty-state">Start a new chat or pick one from the sidebar</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
