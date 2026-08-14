@@ -52,6 +52,8 @@ function App() {
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [documents, setDocuments] = useState([]);
   const [input, setInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [sending, setSending] = useState(false);
@@ -69,6 +71,43 @@ function App() {
     } catch (err) {
       console.error('Could not load conversations:', err);
       setConversations([]);
+    }
+  }
+
+  async function loadDocuments(conversationId = null) {
+    try {
+      const url = conversationId ? `${API_BASE}/documents?conversation_id=${encodeURIComponent(conversationId)}` : `${API_BASE}/documents`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to load documents');
+      const data = await res.json();
+      setDocuments(data);
+    } catch (err) {
+      console.error('Could not load documents:', err);
+      setDocuments([]);
+    }
+  }
+
+  function handleFileChange(e) {
+    const f = e.target.files && e.target.files[0];
+    setSelectedFile(f || null);
+  }
+
+  async function uploadFile() {
+    if (!selectedFile) { alert('Choose a file first'); return; }
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+    if (activeId) fd.append('conversation_id', activeId);
+    try {
+      const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail || 'Upload failed'); return; }
+      alert('Upload successful: ' + data.filename);
+      setSelectedFile(null);
+      document.getElementById('fileInput').value = '';
+      await loadDocuments(activeId);
+    } catch (err) {
+      console.error('Upload error', err);
+      alert('Upload failed');
     }
   }
 
@@ -101,6 +140,7 @@ function App() {
     const res = await fetch(`${API_BASE}/conversations/${id}`);
     const data = await res.json();
     setMessages(data.messages || []);
+    await loadDocuments(id);
   }
 
   async function handleSearch(term) {
@@ -234,9 +274,9 @@ function App() {
   return (
     <div className="app">
       <div className="sidebar">
-        <div className="sidebar-header">
-          <button className="new-chat-btn" onClick={handleNewChat}>+ New Chat</button>
-        </div>
+            <div className="sidebar-header">
+              <button className="new-chat-btn" onClick={handleNewChat}>+ New Chat</button>
+            </div>
         <input
           className="search-box"
           placeholder="Search chats..."
@@ -278,6 +318,13 @@ function App() {
         
         {activeId ? (
           <React.Fragment>
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid #e2e2e8', background: '#fafafa' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="file" id="fileInput" accept=".pdf,.txt" onChange={(e) => handleFileChange(e)} />
+                <button onClick={() => uploadFile()} style={{ padding: '8px 12px' }}>Upload to knowledge</button>
+                <div style={{ marginLeft: 'auto', fontSize: 12, color: '#666' }}>{documents.length} document(s)</div>
+              </div>
+            </div>
             <div className="messages">
               {messages.map((m, i) => (
                 <div key={i} className={"msg " + m.role}>{m.content}</div>

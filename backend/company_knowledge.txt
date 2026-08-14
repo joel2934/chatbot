@@ -10,3 +10,613 @@ The notice period for resignation is 30 days.
 Employees are eligible for health insurance after 90 days of employment.
 The office is closed on all national holidays and has 2 additional floating holidays per year.
 Expense reimbursements are processed within 15 working days of submission.
+
+
+# Source: Azure Cloud Hands-on Project.pdf
+Azure Cloud Hands-on Project
+Problem Statement: Smart Document Management System
+Background
+A company currently stores employee and business documents on individual computers, making it
+difficult
+to
+manage,
+search,
+and
+retrieve
+files.
+They
+want
+to
+migrate
+to
+Azure
+Cloud
+by
+building
+a
+secure
+document
+management
+API
+that
+stores
+files
+in
+Azure
+Blob
+Storage
+while
+maintaining
+metadata
+in
+Azure
+SQL
+Database.
+Your task is to build a FastAPI application that integrates with Azure Blob Storage and Azure SQL
+Database
+.
+Objective
+Develop a FastAPI application that enables users to:
+●
+Upload
+documents
+●
+Store
+files
+in
+Azure
+Blob
+Storage
+●
+Store
+document
+metadata
+in
+Azure
+SQL
+Database
+●
+View
+all
+uploaded
+documents
+●
+View
+document
+details
+by
+ID
+●
+Download
+documents
+●
+Delete
+documents
+●
+Generate
+secure,
+time-limited
+sharing
+links
+that
+automatically
+expire
+after
+a
+specified
+duration
+(e.g.,
+5
+minutes,
+1
+hour,
+or
+24
+hours).
+The application may be run locally. Deploying it to Azure App Service is optional.
+Azure Services to be Used
+Mandatory
+●
+Azure
+Subscription
+●
+Resource
+Group
+●
+Azure
+Storage
+Account
+(Blob
+Storage)
+●
+Azure
+SQL
+Database
+Optional
+●
+Azure
+App
+Service
+Functional Requirements
+1. Upload Document
+The application should allow users to upload files (PDF, Image, or Word document).
+For every uploaded file:
+●
+Store
+the
+file
+in
+Azure
+Blob
+Storage.
+●
+Store
+the
+metadata
+in
+Azure
+SQL
+Database.
+2. View All Documents
+Create an API that returns a list of all uploaded documents.
+3. View Document by ID
+Create an API to retrieve the metadata of a specific document.
+4. Download Document
+Allow users to download the document stored in Azure Blob Storage.
+5. Generate Secure Share Link
+Provide an API that generates a time-limited secure URL (SAS URL) for a document.
+Requirements:
+●
+User
+specifies
+the
+expiry
+duration
+(for
+example,
+5
+minutes,
+1
+hour,
+or
+24
+hours).
+●
+The
+generated
+link
+should
+automatically
+become
+invalid
+after
+the
+expiry
+time.
+●
+Only
+users
+possessing
+the
+generated
+link
+should
+be
+able
+to
+access
+the
+document
+while
+it
+is
+valid.
+6. Delete Document
+When a document is deleted:
+●
+Remove
+the
+file
+from
+Azure
+Blob
+Storage.
+●
+Remove
+the
+corresponding
+metadata
+from
+Azure
+SQL
+Database.
+Database Schema
+Documents
+Column Type
+document_id INT
+file_name VARCHAR
+blob_url VARCHAR
+uploaded_by VARCHAR
+upload_date DATETIME
+file_type VARCHAR
+Azure Infrastructure Requirements
+Students should create:
+●
+Azure
+Subscription
+(provided)
+●
+Resource
+Group
+●
+Storage
+Account
+●
+Blob
+Container
+●
+Azure
+SQL
+Database
+Configuration
+Store secrets using environment variables.
+Example:
+●
+AZURE_STORAGE_CONNECTION_STRING
+●
+AZURE_CONTAINER_NAME
+●
+AZURE_SQL_CONNECTION_STRING
+Deliverables
+●
+GitHub
+Repository
+containing
+the
+complete
+source
+code
+●
+README
+with
+setup
+instructions
+and
+sample
+API
+requests/responses
+●
+Screenshots
+demonstrating
+successful
+upload,
+document
+listing,
+secure
+share
+link
+generation,
+and
+deletion
+Evaluation Criteria
+1. Azure Integration (50%)
+Correct implementation of Azure Blob Storage and Azure SQL Database with proper resource
+organization.
+2. Application Functionality (50%)
+FastAPI application successfully performs document upload, retrieval, secure time-limited sharing,
+and
+deletion,
+with
+the
+source
+code
+maintained
+in
+a
+GitHub
+repository.
+
+
+# Source: Azure Cloud Hands-on Project.pdf
+Azure Cloud Hands-on Project
+Problem Statement: Smart Document Management System
+Background
+A company currently stores employee and business documents on individual computers, making it
+difficult
+to
+manage,
+search,
+and
+retrieve
+files.
+They
+want
+to
+migrate
+to
+Azure
+Cloud
+by
+building
+a
+secure
+document
+management
+API
+that
+stores
+files
+in
+Azure
+Blob
+Storage
+while
+maintaining
+metadata
+in
+Azure
+SQL
+Database.
+Your task is to build a FastAPI application that integrates with Azure Blob Storage and Azure SQL
+Database
+.
+Objective
+Develop a FastAPI application that enables users to:
+●
+Upload
+documents
+●
+Store
+files
+in
+Azure
+Blob
+Storage
+●
+Store
+document
+metadata
+in
+Azure
+SQL
+Database
+●
+View
+all
+uploaded
+documents
+●
+View
+document
+details
+by
+ID
+●
+Download
+documents
+●
+Delete
+documents
+●
+Generate
+secure,
+time-limited
+sharing
+links
+that
+automatically
+expire
+after
+a
+specified
+duration
+(e.g.,
+5
+minutes,
+1
+hour,
+or
+24
+hours).
+The application may be run locally. Deploying it to Azure App Service is optional.
+Azure Services to be Used
+Mandatory
+●
+Azure
+Subscription
+●
+Resource
+Group
+●
+Azure
+Storage
+Account
+(Blob
+Storage)
+●
+Azure
+SQL
+Database
+Optional
+●
+Azure
+App
+Service
+Functional Requirements
+1. Upload Document
+The application should allow users to upload files (PDF, Image, or Word document).
+For every uploaded file:
+●
+Store
+the
+file
+in
+Azure
+Blob
+Storage.
+●
+Store
+the
+metadata
+in
+Azure
+SQL
+Database.
+2. View All Documents
+Create an API that returns a list of all uploaded documents.
+3. View Document by ID
+Create an API to retrieve the metadata of a specific document.
+4. Download Document
+Allow users to download the document stored in Azure Blob Storage.
+5. Generate Secure Share Link
+Provide an API that generates a time-limited secure URL (SAS URL) for a document.
+Requirements:
+●
+User
+specifies
+the
+expiry
+duration
+(for
+example,
+5
+minutes,
+1
+hour,
+or
+24
+hours).
+●
+The
+generated
+link
+should
+automatically
+become
+invalid
+after
+the
+expiry
+time.
+●
+Only
+users
+possessing
+the
+generated
+link
+should
+be
+able
+to
+access
+the
+document
+while
+it
+is
+valid.
+6. Delete Document
+When a document is deleted:
+●
+Remove
+the
+file
+from
+Azure
+Blob
+Storage.
+●
+Remove
+the
+corresponding
+metadata
+from
+Azure
+SQL
+Database.
+Database Schema
+Documents
+Column Type
+document_id INT
+file_name VARCHAR
+blob_url VARCHAR
+uploaded_by VARCHAR
+upload_date DATETIME
+file_type VARCHAR
+Azure Infrastructure Requirements
+Students should create:
+●
+Azure
+Subscription
+(provided)
+●
+Resource
+Group
+●
+Storage
+Account
+●
+Blob
+Container
+●
+Azure
+SQL
+Database
+Configuration
+Store secrets using environment variables.
+Example:
+●
+AZURE_STORAGE_CONNECTION_STRING
+●
+AZURE_CONTAINER_NAME
+●
+AZURE_SQL_CONNECTION_STRING
+Deliverables
+●
+GitHub
+Repository
+containing
+the
+complete
+source
+code
+●
+README
+with
+setup
+instructions
+and
+sample
+API
+requests/responses
+●
+Screenshots
+demonstrating
+successful
+upload,
+document
+listing,
+secure
+share
+link
+generation,
+and
+deletion
+Evaluation Criteria
+1. Azure Integration (50%)
+Correct implementation of Azure Blob Storage and Azure SQL Database with proper resource
+organization.
+2. Application Functionality (50%)
+FastAPI application successfully performs document upload, retrieval, secure time-limited sharing,
+and
+deletion,
+with
+the
+source
+code
+maintained
+in
+a
+GitHub
+repository.

@@ -52,3 +52,23 @@ def retrieve_relevant_knowledge(question: str, top_k: int = 3) -> list[str]:
 
     scored.sort(key=lambda x: x[0], reverse=True)
     return [chunk for _, chunk in scored[:top_k]]
+
+
+def append_text_to_knowledge(text: str, source: str | None = None) -> None:
+    """Append plain text to the `company_knowledge.txt` store as new chunks.
+
+    The text will be split into non-empty paragraphs and appended to the
+    file with an optional source header so it's easier to track later.
+    """
+    if not text:
+        return
+
+    header = f"\n\n# Source: {source}\n" if source else "\n\n"
+    chunks = [c.strip() for c in text.split("\n") if c.strip()]
+    if not chunks:
+        return
+
+    with open(KNOWLEDGE_PATH, "a", encoding="utf-8") as f:
+        f.write(header)
+        for p in chunks:
+            f.write(p + "\n")

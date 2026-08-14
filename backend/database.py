@@ -46,6 +46,22 @@ def init_db():
     conn.commit()
     conn.close()
 
+    # documents table stores uploaded files and optional conversation association
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS documents (
+            document_id TEXT PRIMARY KEY,
+            filename TEXT NOT NULL,
+            path TEXT NOT NULL,
+            conversation_id TEXT,
+            uploaded_at TEXT NOT NULL,
+            FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
+        )
+    """)
+    conn.commit()
+    conn.close()
+
 
 # ---------- conversations ----------
 
@@ -120,6 +136,34 @@ def add_message(conversation_id: str, role: str, content: str) -> dict:
     conn.commit()
     conn.close()
     return {"message_id": message_id, "conversation_id": conversation_id, "role": role, "content": content, "timestamp": timestamp}
+
+
+def add_document(filename: str, path: str, conversation_id: str | None = None) -> dict:
+    document_id = f"doc_{uuid.uuid4().hex[:8]}"
+    uploaded_at = datetime.utcnow().isoformat()
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO documents (document_id, filename, path, conversation_id, uploaded_at) VALUES (?, ?, ?, ?, ?)",
+        (document_id, filename, path, conversation_id, uploaded_at),
+    )
+    conn.commit()
+    conn.close()
+    return {"document_id": document_id, "filename": filename, "path": path, "conversation_id": conversation_id, "uploaded_at": uploaded_at}
+
+
+def list_documents(conversation_id: str | None = None) -> list:
+    conn = get_conn()
+    if conversation_id:
+        rows = conn.execute(
+            "SELECT * FROM documents WHERE conversation_id = ? ORDER BY uploaded_at DESC",
+            (conversation_id,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM documents ORDER BY uploaded_at DESC"
+        ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 def get_messages(conversation_id: str, limit: int | None = None) -> list:

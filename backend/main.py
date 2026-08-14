@@ -7,13 +7,19 @@ Run with:
     uvicorn main:app --reload --port 8000
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 import database as db
 import knowledge
 import llm
+
+import os
+from pathlib import Path
+import io
+from datetime import datetime
+from PyPDF2 import PdfReader
 
 app = FastAPI(title="Company Chatbot API")
 
@@ -40,6 +46,68 @@ class NewMessage(BaseModel):
 @app.get("/")
 def root():
     return {"status": "ok", "message": "Company Chatbot API is running"}
+
+
+# ---------- document upload & listing ----------
+
+UPLOAD_DIR = Path(__file__).parent / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+
+@app.post("/upload")
+async def upload_document(file: UploadFile = File(...), conversation_id: str | None = Form(None)):
+    """Accept PDF or TXT files, extract text, and append to knowledge store."""
+    filename = file.filename
+    dest = UPLOAD_DIR / filename
+
+    contents = await file.read()
+
+    # Save raw file
+    with open(dest, "wb") as f:
+        f.write(contents)
+
+    text = ""
+    suffix = Path(filename).suffix.lower()
+    try:
+        if suffix == ".pdf":
+            reader = PdfReader(io.BytesIO(contents))
+            pages = []
+            for p in reader.pages:
+                try:
+                    pages.append(p.extract_text() or "")
+                except Exception:
+                    pages.append("")
+            text = "\n\n".join(pages)
+        elif suffix in {".txt"}:
+            text = contents.decode("utf-8", errors="ignore")
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type. Use PDF or TXT.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to extract text: {e}")
+
+    # Append extracted text to knowledge store
+    knowledge.append_text_to_knowledge(text, source=filename)
+
+    # record document metadata in the database
+    try:
+        db.add_document(filename, str(dest), conversation_id)
+    except Exception as e:
+        # don't fail the whole upload if DB write fails, but log
+        print("Warning: could not write document metadata:", e)
+
+    return {"status": "ok", "filename": filename}
+
+
+@app.get("/documents")
+def list_documents(conversation_id: str | None = None):
+    """Return documents, optionally filtered by `conversation_id`."""
+    try:
+        docs = db.list_documents(conversation_id)
+        return docs
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ---------- conversations ----------
