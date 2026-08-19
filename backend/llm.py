@@ -1,33 +1,66 @@
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# load .env located in the same folder as this file (works regardless of CWD)
+
+# ---------------------------------------------------------
+# Load environment variables from backend/.env
+# ---------------------------------------------------------
+
 env_path = Path(__file__).parent / ".env"
 load_dotenv(env_path)
 
-API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+GATEWAY_URL = os.getenv("GATEWAY_URL")
+API_KEY = os.getenv("OPENAI_API_KEY")
+
+
+# ---------------------------------------------------------
+# Validate configuration
+# ---------------------------------------------------------
 
 if not API_KEY:
-    raise ValueError("OPENROUTER_API_KEY is not set")
+    raise ValueError("OPENAI_API_KEY is not set in backend/.env")
+
+if not GATEWAY_URL:
+    raise ValueError("GATEWAY_URL is not set in backend/.env")
+
+
+# ---------------------------------------------------------
+# Create OpenAI client
+#
+# The organization gateway is used instead of the
+# public OpenAI endpoint.
+# ---------------------------------------------------------
 
 client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
+    base_url=GATEWAY_URL,
     api_key=API_KEY
 )
 
-MODEL = "openrouter/free"
+
+# ---------------------------------------------------------
+# Model
+#
+# Change this if your organization gateway requires
+# a specific model name.
+# ---------------------------------------------------------
+
+MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 
 def build_system_prompt(knowledge_chunks: list[str]) -> str:
 
     if knowledge_chunks:
         knowledge_block = "\n".join(
-            f"- {c}" for c in knowledge_chunks
+            f"- {chunk}" for chunk in knowledge_chunks
         )
     else:
-        knowledge_block = "(no directly relevant company information found)"
+        knowledge_block = (
+            "(no directly relevant company information found)"
+        )
 
     return f"""
 You are a helpful company assistant chatbot.
@@ -38,7 +71,7 @@ and company information when relevant.
 If the company information does not cover the question,
 say so honestly and answer generally if you can.
 
-Keep answers concise and friendly.
+Keep answers concise, clear and friendly.
 
 Company Information:
 {knowledge_block}
@@ -55,10 +88,10 @@ def generate_response(
 
     messages = [
         {
-            "role": m["role"],
-            "content": m["content"]
+            "role": message["role"],
+            "content": message["content"]
         }
-        for m in history
+        for message in history
     ]
 
     messages.append({
@@ -66,8 +99,10 @@ def generate_response(
         "content": question
     })
 
-    print("\nSending request to OpenRouter...")
+    print("\n========== OPENAI REQUEST ==========")
+    print("Gateway:", GATEWAY_URL)
     print("Model:", MODEL)
+    print("Question:", question)
 
     response = client.chat.completions.create(
         model=MODEL,
@@ -81,11 +116,11 @@ def generate_response(
         max_tokens=1000
     )
 
-    print("OpenRouter response received.")
+    print("OpenAI response received.")
 
     answer = response.choices[0].message.content
 
     if not answer:
-        raise ValueError("OpenRouter returned an empty response")
+        raise ValueError("OpenAI returned an empty response")
 
     return answer
