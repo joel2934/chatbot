@@ -839,3 +839,376 @@ Always run from the project root:
 python main.py                          # app (seed data auto-loads)
 python -m unittest discover tests -v    # all tests
 STRETCH (OPTIONAL)
+
+
+# Source: AI_Operations_Agent_Business_Case.pdf
+AI Operations Agent
+A LangGraph Multi-Tool Assistant to Eliminate Manual Cross-System Busywork
+Business Case & Problem Statement
+Prepared for: Meridian Retail Group — Global Operations & Analytics
+Prepared by: AI Automation Initiative
+Status: Approved for Pilot Build
+1. Executive Summary
+Meridian Retail Group's operations team currently spends the majority of its analyst hours manually pulling
+information from a dozen disconnected public and internal sources — shipping-route weather, competitor
+pricing, supplier country/currency data, candidate screening, crypto/FX exposure, industry news, and more —
+and then hand-assembling the results into PDF, Excel, and Word reports for leadership. This is slow,
+error-prone, and expensive. This document lays out the problem in concrete cost terms and proposes a
+single conversational AI Operations Agent, built on LangGraph, that can call all of these data sources as
+tools, generate the final documents automatically, and pause for explicit human approval before doing
+anything irreversible (like deleting a file).
+Bottom line: the current process costs Meridian an estimated $186,800/year in analyst time and
+delay-related losses. The proposed agent is estimated to cut that by roughly 70–80% within one quarter of
+rollout.
+2. The Problem
+Every week, a team of four operations analysts repeats the same manual workflow across unrelated websites
+and spreadsheets to answer questions that are individually simple but collectively expensive to answer by
+hand:
+Task
+Manual Source Today
+Hours /
+Week
+Pain Point
+Check weather at 15 shipping hubs
+before routing decisions
+Manual browser
+lookups
+4.5
+Delayed routing, occasional
+missed weather-driven delays
+Competitor price checks on ~40
+SKUs
+Manual store browsing
+6.0
+Stale prices by the time a
+decision is made
+Supplier country / currency / holiday
+checks
+Manual search per
+country
+3.5
+Missed local holidays causing
+shipment delays
+Candidate sourcing/screening
+summaries for HR
+Manual resume review
+5.0
+Inconsistent shortlist quality
+Crypto/FX exposure snapshot for
+finance
+Manual exchange
+lookups
+2.0
+Numbers already stale in the
+finance meeting
+Industry/tech news roundup
+Manual browsing of
+forums/news
+3.0
+Inconsistent coverage, analyst
+bias
+Assembling weekly PDF/Excel/Word
+reports
+Manual copy-paste +
+formatting
+8.0
+~1 full day per analyst just on
+formatting
+TOTAL (per analyst, weekly)
+32.0
+At 4 analysts × 32 hours/week × 48 working weeks × a fully-loaded rate of $38/hour, this is ≈$233,472/year in
+raw labor time alone before counting the cost of delayed or lower-quality decisions caused by stale data
+(estimated conservatively at $15,000–$20,000/quarter in missed pricing and shipping-delay avoidance).
+3. Business Impact if Left Unaddressed
+
+Analyst time is spent on repetitive lookups instead of analysis — a direct opportunity cost.
+
+Report turnaround (currently 1–2 days) delays pricing, routing, and hiring decisions.
+
+Manual copy-paste between browser tabs and Office documents is a recurring source of errors.
+
+No consistent audit trail of what data was pulled, from where, or when.
+
+Scaling to more product lines or regions means linearly scaling headcount, not automation.
+4. Proposed Solution: The AI Operations Agent
+We propose a single conversational agent, built with LangGraph, that exposes every data source above as a
+callable tool behind one chat interface. An operator (or another internal system) simply asks in plain language
+— e.g. "Check the weather at our Rotterdam and Singapore hubs, pull the current EUR/USD and BTC/USD
+rates, and put it all in a one-page PDF for the 9am call" — and the agent plans, calls the right tools in the right
+order, and produces the finished document.
+4.1 Tool Catalog
+All data-source tools below are free, public APIs requiring no paid key (one, CoinGecko, is free for this
+volume of use but may rate-limit at high frequency). Each is wired into the agent as a distinct LangGraph tool.
+Domain
+Tool
+Provider / Link
+What it does
+Weather &
+Logistics
+get_weather
+open-meteo.com
+Current weather & forecast for any lat/long — used for
+shipping-route risk checks
+E-Commerce
+search_products
+dummyjson.com
+Product search/filter/pricing lookups for competitor-style
+checks
+Trade &
+Travel
+get_country_info
+restcountries.com
+Country profile: currency, timezone, region, borders
+HR
+get_candidates
+randomuser.me
+Generates structured candidate-style profiles for
+sourcing/screening demos
+Public
+Holidays
+get_public_holidays
+date.nager.at
+Official public holidays by country/year — for
+shipping/HR planning
+Finance
+get_crypto_price
+coingecko.com
+Live crypto prices in USD/EUR/etc.
+Finance
+convert_currency
+open.er-api.com
+Live FX conversion rates
+Geography
+geocode_location
+nominatim.openstreetm
+ap.org
+Turns a place name into coordinates for the weather tool
+News
+get_hn_top_stories
+Hacker News API
+(Firebase)
+Top tech/industry stories right now
+Knowledge
+search_wikipedia
+en.wikipedia.org REST
+API
+Quick factual lookups / summaries
+Utilities
+calculate
+api.mathjs.org (+ local
+fallback)
+Safe arithmetic / unit conversion
+Utilities
+test_http_request
+httpbin.org
+Sanity-checks outbound HTTP calls / integrations
+Entertainment
+search_tv_show
+tvmaze.com
+Show/cast/schedule lookups (team offsite planning, etc.)
+Team Culture
+tell_joke
+v2.jokeapi.dev
+A programming/pun joke — for standup icebreakers
+Team Culture
+get_advice
+api.adviceslip.com
+Random one-line advice — lighter touch for
+reports/standups
+Team Culture
+get_cat_fact
+catfact.ninja
+A random cat fact — same purpose
+HR / Fun
+predict_age
+api.agify.io
+Predicts an age range from a first name (demographic
+estimation demo)
+Domain
+Tool
+Provider / Link
+What it does
+Demo /
+Games
+get_pokemon_info
+pokeapi.co
+Included as a lightweight, zero-risk demo tool for
+training/testing
+Demo
+get_latest_launch
+api.spacexdata.com
+Latest SpaceX launch info — used to demo
+event/status-style lookups
+Demo
+get_trivia_question
+opentdb.com
+Generates a trivia question — used to test
+structured-output handling
+4.2 Internal Tools (no external API)
+Tool
+What it does
+create_file / write_file / read_file /
+list_files
+Manage working files the agent produces (drafts, data pulls, logs)
+delete_file
+Deletes a file — gated behind mandatory Human-in-the-Loop (HITL) approval, see
+4.3
+generate_pdf_report
+Builds a formatted PDF (ReportLab) — the same technique used to produce this
+document
+generate_excel_report
+Builds a formatted .xlsx workbook (openpyxl) for finance/ops data
+generate_word_doc
+Builds a formatted .docx (python-docx) for narrative reports/memos
+4.3 Human-in-the-Loop Safety
+The agent can read, write, and generate files autonomously, but file deletion always pauses the workflow
+and asks a human to explicitly confirm before anything is removed. This is implemented as a genuine
+LangGraph interrupt (not just a print statement) — the graph checkpoints its state, halts before the delete
+executes, and only resumes once a human replies. No irreversible action ships without a person in the loop.
+5. How It Works (Architecture)
+
+1. Operator sends a request in plain English to the agent.
+
+2. The Agent node (gpt-4o-mini) decides which tool(s), if any, are needed.
+
+3. The Tools node executes the chosen tool(s) — weather, pricing, FX, file ops, document generation,
+etc.
+
+4. Control returns to the Agent node, which decides whether more tool calls are needed or the task is
+done.
+
+5. If the task involves delete_file, the graph interrupts and waits for explicit human approval before
+continuing.
+
+6. The Agent returns a final answer and/or a generated PDF / Excel / Word file.
+The reference implementation (companion notebook: langgraph_ops_agent.ipynb) runs directly in Google
+Colab, loading API keys from Colab Secrets, and includes a one-cell health check that pings every external
+API listed in section 4.1 so the operator can confirm live availability before a demo.
+6. Expected ROI
+Metric
+Today (Manual)
+With AI Operations Agent
+Impact
+Analyst hours / week on
+lookups + formatting
+32 hrs × 4 analysts =
+128 hrs
+~25–35 hrs total
+≈75% time recovered
+Annual labor cost of this
+workflow
+≈$233,000
+≈$45,000–$60,000
+≈$175,000–$190,000
+saved/year
+Report turnaround time
+1–2 days
+Minutes
+Same-day decisions
+Data freshness at time of
+decision
+Hours to days old
+Live at request time
+Fewer stale-data errors
+Destructive-action safety
+Ad hoc / manual care
+Mandatory human approval on
+delete
+Lower operational risk
+7. Implementation Roadmap
+Phase
+Duration
+Deliverable
+1. Pilot build
+Week 1–2
+Notebook agent covering weather, pricing, FX, and
+PDF/Excel/Word generation
+2. HITL & file safety
+hardening
+Week 3
+LangGraph interrupt-based approval flow for all destructive
+actions
+3. Team pilot (1 ops squad)
+Week 4–6
+Daily use on real reporting tasks; collect time-saved metrics
+Phase
+Duration
+Deliverable
+4. Rollout
+Week 7–10
+Roll out to all ops + HR + finance analysts; add team-specific
+tools as needed
+Recommendation: Approve the pilot build described above. All required data sources are free, public
+APIs — the only recurring cost is LLM usage (gpt-4o-mini), estimated at well under $50/month for this
+team's volume.
+Appendix A: Full API Reference
+Live links for every external API used by the companion notebook. All are free for the request volumes
+described in this document; a few (marked *) may apply light rate-limiting under heavy use.
+API
+Base URL
+Auth Required
+Open-Meteo
+https://api.open-meteo.com/v1/forecast
+No
+DummyJSON
+https://dummyjson.com/products/search
+No
+REST Countries
+https://restcountries.com/v3.1
+No
+RandomUser
+https://randomuser.me/api/
+No
+Nager.Date (holidays)
+https://date.nager.at/api/v3/PublicHolidays
+No
+CoinGecko*
+https://api.coingecko.com/api/v3/simple/price
+No
+Open Exchange Rates
+(open.er-api.com)
+https://open.er-api.com/v6/latest
+No
+Nominatim (OpenStreetMap)*
+https://nominatim.openstreetmap.org/search
+No (custom
+User-Agent required)
+Hacker News (Firebase)
+https://hacker-news.firebaseio.com/v0/
+No
+Wikipedia REST API
+https://en.wikipedia.org/api/rest_v1/page/summary/
+No
+Math.js API*
+https://api.mathjs.org/v4/
+No
+HTTPBin
+https://httpbin.org/
+No
+TVMaze
+https://api.tvmaze.com/search/shows
+No
+JokeAPI
+https://v2.jokeapi.dev/joke/Any
+No
+Advice Slip
+https://api.adviceslip.com/advice
+No
+Cat Facts
+https://catfact.ninja/fact
+No
+Agify
+https://api.agify.io/
+No
+PokeAPI
+https://pokeapi.co/api/v2/pokemon/
+No
+SpaceX API (community)*
+https://api.spacexdata.com/v4/launches/latest
+No
+Open Trivia DB
+https://opentdb.com/api.php
+No
+Note: public free APIs occasionally change, rate-limit, or have downtime outside anyone's control. The companion notebook
+includes a health-check cell that calls each endpoint and reports OK/FAIL at run time, so availability can always be confirmed live
+rather than assumed from this document.
