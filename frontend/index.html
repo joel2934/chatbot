@@ -12,7 +12,6 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
-
     * {
       box-sizing: border-box;
     }
@@ -330,54 +329,15 @@
       border-bottom: 1px solid var(--border);
     }
 
-    .file-input {
-      display: none;
-    }
-
-    .file-label {
-      display: inline-flex;
+    .knowledge-label {
+      display: flex;
       align-items: center;
       gap: 7px;
-
-      padding: 7px 10px;
-
-      border: 1px solid var(--border);
-
-      background: white;
-
-      border-radius: 7px;
-
-      cursor: pointer;
 
       font-size: 12px;
       font-weight: 600;
 
       color: #374151;
-    }
-
-    .file-label:hover {
-      background: #f9fafb;
-    }
-
-    .upload-btn {
-      padding: 7px 12px;
-
-      border: 1px solid #bfdbfe;
-
-      background: #eff6ff;
-
-      color: #1d4ed8;
-
-      border-radius: 7px;
-
-      font-size: 12px;
-      font-weight: 600;
-
-      cursor: pointer;
-    }
-
-    .upload-btn:hover {
-      background: #dbeafe;
     }
 
     .document-count {
@@ -647,939 +607,937 @@
       }
 
     }
-
   </style>
 </head>
 
 <body>
 
-<div id="root"></div>
+  <div id="root"></div>
 
-<script type="text/babel">
+  <script type="text/babel">
 
-const { useState, useEffect, useRef } = React;
+    const { useState, useEffect, useRef } = React;
 
 
-const API_BASE = "http://localhost:8000";
+    // Backend API
+    const API_BASE = "http://localhost:8000";
 
 
-function App() {
+    function App() {
 
-  const [conversations, setConversations] = useState([]);
+      const [conversations, setConversations] = useState([]);
 
-  const [activeId, setActiveId] = useState(null);
+      const [activeId, setActiveId] = useState(null);
 
-  const [messages, setMessages] = useState([]);
+      const [messages, setMessages] = useState([]);
 
-  const [selectedFile, setSelectedFile] = useState(null);
+      const [documents, setDocuments] = useState([]);
 
-  const [documents, setDocuments] = useState([]);
+      const [input, setInput] = useState("");
 
-  const [input, setInput] = useState("");
+      const [searchTerm, setSearchTerm] = useState("");
 
-  const [searchTerm, setSearchTerm] = useState("");
+      const [sending, setSending] = useState(false);
 
-  const [sending, setSending] = useState(false);
+      const messagesEndRef = useRef(null);
 
-  const messagesEndRef = useRef(null);
 
+      // Load conversations when application starts
+      useEffect(() => {
 
-  useEffect(() => {
+        loadConversations();
 
-    loadConversations();
+      }, []);
 
-  }, []);
 
+      // Automatically scroll to latest message
+      useEffect(() => {
 
-  useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: "smooth"
+        });
 
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth"
-    });
+      }, [messages]);
 
-  }, [messages]);
 
+      // --------------------------------------------------
+      // LOAD CONVERSATIONS
+      // --------------------------------------------------
 
-  async function loadConversations() {
+      async function loadConversations() {
 
-    try {
+        try {
 
-      const res = await fetch(`${API_BASE}/conversations`);
+          const res = await fetch(
+            `${API_BASE}/conversations`
+          );
 
-      if (!res.ok) {
-        throw new Error("Failed to load conversations");
-      }
+          if (!res.ok) {
 
-      const data = await res.json();
+            throw new Error(
+              "Failed to load conversations"
+            );
 
-      setConversations(data);
+          }
 
-    } catch (error) {
+          const data = await res.json();
 
-      console.error(error);
+          setConversations(data);
 
-      setConversations([]);
+        } catch (error) {
 
-    }
+          console.error(error);
 
-  }
+          setConversations([]);
 
-
-  async function loadDocuments(conversationId = null) {
-
-    try {
-
-      const url = conversationId
-        ? `${API_BASE}/documents?conversation_id=${encodeURIComponent(conversationId)}`
-        : `${API_BASE}/documents`;
-
-      const res = await fetch(url);
-
-      if (!res.ok) {
-        throw new Error("Failed to load documents");
-      }
-
-      const data = await res.json();
-
-      setDocuments(data);
-
-    } catch (error) {
-
-      console.error(error);
-
-      setDocuments([]);
-
-    }
-
-  }
-
-
-  function handleFileChange(event) {
-
-    const file =
-      event.target.files &&
-      event.target.files[0];
-
-    setSelectedFile(file || null);
-
-  }
-
-
-  async function uploadFile() {
-
-    if (!selectedFile) {
-
-      alert("Please choose a PDF or TXT file first.");
-
-      return;
-
-    }
-
-
-    const formData = new FormData();
-
-    formData.append("file", selectedFile);
-
-    if (activeId) {
-      formData.append(
-        "conversation_id",
-        activeId
-      );
-    }
-
-
-    try {
-
-      const res = await fetch(
-        `${API_BASE}/upload`,
-        {
-          method: "POST",
-          body: formData
         }
-      );
 
-      const data = await res.json();
+      }
 
 
-      if (!res.ok) {
+      // --------------------------------------------------
+      // LOAD DOCUMENT INFORMATION
+      // --------------------------------------------------
 
-        alert(
-          data.detail ||
-          "Upload failed"
+      async function loadDocuments(
+        conversationId = null
+      ) {
+
+        try {
+
+          const url = conversationId
+            ? `${API_BASE}/documents?conversation_id=${encodeURIComponent(conversationId)}`
+            : `${API_BASE}/documents`;
+
+          const res = await fetch(url);
+
+          if (!res.ok) {
+
+            throw new Error(
+              "Failed to load documents"
+            );
+
+          }
+
+          const data = await res.json();
+
+          setDocuments(data);
+
+        } catch (error) {
+
+          console.error(error);
+
+          setDocuments([]);
+
+        }
+
+      }
+
+
+      // --------------------------------------------------
+      // CREATE NEW CHAT
+      // --------------------------------------------------
+
+      async function handleNewChat() {
+
+        try {
+
+          const res = await fetch(
+            `${API_BASE}/conversations`,
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type": "application/json"
+              },
+
+              body: JSON.stringify({
+                title: "New Chat"
+              })
+            }
+          );
+
+          const data = await res.json();
+
+          if (!res.ok) {
+
+            alert(
+              data.detail ||
+              "Failed to create conversation"
+            );
+
+            return;
+
+          }
+
+          await loadConversations();
+
+          setActiveId(
+            data.conversation_id
+          );
+
+          setMessages([]);
+
+          setDocuments([]);
+
+        } catch (error) {
+
+          console.error(error);
+
+          alert(
+            "Could not create chat. Is the backend running?"
+          );
+
+        }
+
+      }
+
+
+      // --------------------------------------------------
+      // OPEN EXISTING CONVERSATION
+      // --------------------------------------------------
+
+      async function openConversation(id) {
+
+        try {
+
+          setActiveId(id);
+
+          const res = await fetch(
+            `${API_BASE}/conversations/${id}`
+          );
+
+          const data = await res.json();
+
+          setMessages(
+            data.messages || []
+          );
+
+          await loadDocuments(id);
+
+        } catch (error) {
+
+          console.error(error);
+
+        }
+
+      }
+
+
+      // --------------------------------------------------
+      // SEARCH CONVERSATIONS
+      // --------------------------------------------------
+
+      async function handleSearch(term) {
+
+        setSearchTerm(term);
+
+        if (!term.trim()) {
+
+          await loadConversations();
+
+          return;
+
+        }
+
+        try {
+
+          const res = await fetch(
+            `${API_BASE}/conversations/search?q=${encodeURIComponent(term)}`
+          );
+
+          const data = await res.json();
+
+          setConversations(data);
+
+        } catch (error) {
+
+          console.error(error);
+
+        }
+
+      }
+
+
+      // --------------------------------------------------
+      // DELETE CONVERSATION
+      // --------------------------------------------------
+
+      async function handleDeleteChat(id) {
+
+        const confirmed = window.confirm(
+          "Delete this conversation?"
         );
 
-        return;
+        if (!confirmed) {
 
-      }
+          return;
 
-
-      setSelectedFile(null);
-
-      document.getElementById(
-        "fileInput"
-      ).value = "";
-
-
-      await loadDocuments(activeId);
-
-
-      alert(
-        `Uploaded: ${data.filename}`
-      );
-
-    } catch (error) {
-
-      console.error(error);
-
-      alert("Could not reach the backend.");
-
-    }
-
-  }
-
-
-  async function handleNewChat() {
-
-    try {
-
-      const res = await fetch(
-        `${API_BASE}/conversations`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            title: "New Chat"
-          })
         }
-      );
 
+        try {
 
-      const data = await res.json();
+          const res = await fetch(
+            `${API_BASE}/conversations/${id}`,
+            {
+              method: "DELETE"
+            }
+          );
 
+          if (!res.ok) {
 
-      if (!res.ok) {
+            const data = await res.json();
 
-        alert(
-          data.detail ||
-          "Failed to create conversation"
-        );
+            alert(
+              data.detail ||
+              "Failed to delete conversation"
+            );
 
-        return;
+            return;
 
-      }
+          }
 
+          if (id === activeId) {
 
-      await loadConversations();
+            setActiveId(null);
 
-      setActiveId(
-        data.conversation_id
-      );
+            setMessages([]);
 
-      setMessages([]);
+            setDocuments([]);
 
-      setDocuments([]);
+          }
 
-    } catch (error) {
+          await loadConversations();
 
-      console.error(error);
+        } catch (error) {
 
-      alert(
-        "Could not create chat. Is the backend running?"
-      );
+          console.error(error);
 
-    }
+          alert(
+            "Could not delete conversation."
+          );
 
-  }
-
-
-  async function openConversation(id) {
-
-    try {
-
-      setActiveId(id);
-
-      const res = await fetch(
-        `${API_BASE}/conversations/${id}`
-      );
-
-      const data = await res.json();
-
-      setMessages(
-        data.messages || []
-      );
-
-      await loadDocuments(id);
-
-    } catch (error) {
-
-      console.error(error);
-
-    }
-
-  }
-
-
-  async function handleSearch(term) {
-
-    setSearchTerm(term);
-
-
-    if (!term.trim()) {
-
-      await loadConversations();
-
-      return;
-
-    }
-
-
-    try {
-
-      const res = await fetch(
-        `${API_BASE}/conversations/search?q=${encodeURIComponent(term)}`
-      );
-
-      const data = await res.json();
-
-      setConversations(data);
-
-    } catch (error) {
-
-      console.error(error);
-
-    }
-
-  }
-
-
-  async function handleDeleteChat(id) {
-
-    const confirmed = window.confirm(
-      "Delete this conversation?"
-    );
-
-
-    if (!confirmed) {
-      return;
-    }
-
-
-    try {
-
-      const res = await fetch(
-        `${API_BASE}/conversations/${id}`,
-        {
-          method: "DELETE"
         }
-      );
-
-
-      if (!res.ok) {
-
-        const data = await res.json();
-
-        alert(
-          data.detail ||
-          "Failed to delete conversation"
-        );
-
-        return;
 
       }
 
 
-      if (id === activeId) {
+      // --------------------------------------------------
+      // SEND MESSAGE
+      // --------------------------------------------------
 
-        setActiveId(null);
+      async function handleSend() {
 
-        setMessages([]);
+        if (
+          !input.trim() ||
+          !activeId ||
+          sending
+        ) {
 
-        setDocuments([]);
+          return;
 
-      }
-
-
-      await loadConversations();
-
-    } catch (error) {
-
-      console.error(error);
-
-      alert(
-        "Could not delete conversation."
-      );
-
-    }
-
-  }
-
-
-  async function handleSend() {
-
-    if (
-      !input.trim() ||
-      !activeId ||
-      sending
-    ) {
-      return;
-    }
-
-
-    const question =
-      input.trim();
-
-
-    setInput("");
-
-    setSending(true);
-
-
-    setMessages(prev => [
-
-      ...prev,
-
-      {
-        role: "user",
-        content: question,
-        timestamp: ""
-      }
-
-    ]);
-
-
-    try {
-
-      const res = await fetch(
-        `${API_BASE}/conversations/${activeId}/messages`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            content: question
-          })
         }
-      );
+
+        const question =
+          input.trim();
 
 
-      const data = await res.json();
+        // Clear input immediately
+        setInput("");
+
+        // Disable send button while waiting
+        setSending(true);
 
 
-      if (!res.ok) {
-
-        const errorMessage =
-          data.detail ||
-          "Something went wrong on the server.";
-
-
+        // Immediately show user's message
         setMessages(prev => [
 
           ...prev,
 
           {
-            role: "assistant",
-
-            content:
-              `Error: ${errorMessage}`
+            role: "user",
+            content: question,
+            timestamp: new Date().toISOString()
           }
 
         ]);
 
-        return;
+
+        try {
+
+          const res = await fetch(
+            `${API_BASE}/conversations/${activeId}/messages`,
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type": "application/json"
+              },
+
+              body: JSON.stringify({
+                content: question
+              })
+            }
+          );
+
+
+          const data = await res.json();
+
+
+          // Backend returned an error
+          if (!res.ok) {
+
+            const errorMessage =
+              data.detail ||
+              "Something went wrong on the server.";
+
+
+            setMessages(prev => [
+
+              ...prev,
+
+              {
+                role: "assistant",
+
+                content:
+                  `Error: ${errorMessage}`
+              }
+
+            ]);
+
+            return;
+
+          }
+
+
+          // Add assistant response
+          setMessages(prev => [
+
+            ...prev,
+
+            data.assistant_message
+
+          ]);
+
+
+          /*
+           * IMPORTANT:
+           *
+           * We intentionally DO NOT call:
+           *
+           * await loadConversations();
+           *
+           * here.
+           *
+           * Calling it after every message causes
+           * unnecessary UI refreshing.
+           */
+
+
+        } catch (error) {
+
+          console.error(error);
+
+
+          setMessages(prev => [
+
+            ...prev,
+
+            {
+              role: "assistant",
+
+              content:
+                "Error: Could not reach the backend server."
+            }
+
+          ]);
+
+
+        } finally {
+
+          setSending(false);
+
+        }
 
       }
 
 
-      setMessages(prev => [
+      // --------------------------------------------------
+      // RENDER
+      // --------------------------------------------------
 
-        ...prev,
+      return (
 
-        data.assistant_message
+        <div className="app">
 
-      ]);
 
+          {/* ================= SIDEBAR ================= */}
 
-      await loadConversations();
+          <aside className="sidebar">
 
 
-    } catch (error) {
+            <div className="sidebar-header">
 
-      console.error(error);
 
+              <div className="brand">
 
-      setMessages(prev => [
+                <div className="brand-icon">
+                  AI
+                </div>
 
-        ...prev,
 
-        {
-          role: "assistant",
+                <div>
 
-          content:
-            "Error: Could not reach the backend server."
-        }
+                  <div className="brand-text">
+                    Company Assistant
+                  </div>
 
-      ]);
-
-    } finally {
-
-      setSending(false);
-
-    }
-
-  }
-
-
-  return (
-
-    <div className="app">
-
-
-      {/* SIDEBAR */}
-
-      <aside className="sidebar">
-
-
-        <div className="sidebar-header">
-
-          <div className="brand">
-
-            <div className="brand-icon">
-              AI
-            </div>
-
-            <div>
-
-              <div className="brand-text">
-                Company Assistant
-              </div>
-
-              <div className="brand-subtitle">
-                AI-powered knowledge assistant
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <button
-            className="new-chat-btn"
-            onClick={handleNewChat}
-          >
-            + New conversation
-          </button>
-
-        </div>
-
-
-        <div className="search-container">
-
-          <div className="search-wrapper">
-
-            <span className="search-icon">
-              🔍
-            </span>
-
-            <input
-              className="search-box"
-
-              placeholder="Search conversations..."
-
-              value={searchTerm}
-
-              onChange={e =>
-                handleSearch(
-                  e.target.value
-                )
-              }
-            />
-
-          </div>
-
-        </div>
-
-
-        <div className="chat-section-title">
-          Conversations
-        </div>
-
-
-        <div className="chat-list">
-
-          {conversations.length === 0 ? (
-
-            <div
-              style={{
-                padding: "15px",
-                color: "#9ca3af",
-                fontSize: "12px",
-                textAlign: "center"
-              }}
-            >
-              No conversations yet
-            </div>
-
-          ) : (
-
-            conversations.map(
-              conversation => (
-
-                <div
-
-                  key={
-                    conversation.conversation_id
-                  }
-
-                  className={
-                    "chat-item" +
-                    (
-                      conversation.conversation_id ===
-                      activeId
-                        ? " active"
-                        : ""
-                    )
-                  }
-
-                  onClick={() =>
-                    openConversation(
-                      conversation.conversation_id
-                    )
-                  }
-
-                >
-
-                  <span className="chat-title">
-
-                    {conversation.title}
-
-                  </span>
-
-
-                  <button
-
-                    className="delete-btn"
-
-                    onClick={event => {
-
-                      event.stopPropagation();
-
-                      handleDeleteChat(
-                        conversation.conversation_id
-                      );
-
-                    }}
-
-                    title="Delete conversation"
-
-                  >
-                    🗑
-                  </button>
+                  <div className="brand-subtitle">
+                    AI-powered knowledge assistant
+                  </div>
 
                 </div>
 
-              )
-            )
-
-          )}
-
-        </div>
-
-      </aside>
-
-
-      {/* MAIN */}
-
-      <main className="main">
-
-
-        {/* HEADER */}
-
-        <header className="header">
-
-          <div className="header-title">
-            Company AI Assistant
-          </div>
-
-
-          <div className="connection-status">
-
-            <span className="status-dot"></span>
-
-            Backend connected
-
-          </div>
-
-        </header>
-
-
-        {activeId ? (
-
-          <>
-
-            {/* DOCUMENT BAR */}
-
-            <div className="document-bar">
-
-              <label
-                className="file-label"
-                htmlFor="fileInput"
-              >
-
-                📎
-
-                {selectedFile
-                  ? selectedFile.name
-                  : "Choose document"}
-
-              </label>
-
-
-              <input
-                id="fileInput"
-                className="file-input"
-                type="file"
-                accept=".pdf,.txt"
-                onChange={
-                  handleFileChange
-                }
-              />
+              </div>
 
 
               <button
-                className="upload-btn"
-                onClick={uploadFile}
+                className="new-chat-btn"
+                onClick={handleNewChat}
               >
-                Upload to knowledge
+
+                + New conversation
+
               </button>
 
 
-              <div className="document-count">
+            </div>
 
-                {documents.length}
 
-                {" "}
+            {/* SEARCH */}
 
-                {documents.length === 1
-                  ? "document"
-                  : "documents"}
+            <div className="search-container">
+
+              <div className="search-wrapper">
+
+                <span className="search-icon">
+                  🔍
+                </span>
+
+
+                <input
+                  className="search-box"
+
+                  placeholder="Search conversations..."
+
+                  value={searchTerm}
+
+                  onChange={e =>
+                    handleSearch(
+                      e.target.value
+                    )
+                  }
+
+                />
 
               </div>
 
             </div>
 
 
-            {/* MESSAGES */}
+            {/* CONVERSATIONS */}
 
-            <div className="messages">
+            <div className="chat-section-title">
+              Conversations
+            </div>
 
-              {messages.length === 0 ? (
 
-                <div className="empty-state">
+            <div className="chat-list">
 
-                  <div className="empty-icon">
-                    ✦
-                  </div>
+              {conversations.length === 0 ? (
 
-                  <div className="empty-title">
-                    How can I help you?
-                  </div>
+                <div
+                  style={{
+                    padding: "15px",
+                    color: "#9ca3af",
+                    fontSize: "12px",
+                    textAlign: "center"
+                  }}
+                >
 
-                  <div className="empty-description">
-
-                    Ask questions about the company,
-                    upload documents, or search through
-                    your previous conversations.
-
-                  </div>
+                  No conversations yet
 
                 </div>
 
               ) : (
 
-                messages.map(
-                  (message, index) => (
+                conversations.map(
+                  conversation => (
 
                     <div
 
-                      key={index}
+                      key={
+                        conversation.conversation_id
+                      }
 
                       className={
-                        "message-row " +
-                        message.role
+                        "chat-item" +
+
+                        (
+                          conversation.conversation_id ===
+                          activeId
+                            ? " active"
+                            : ""
+                        )
+                      }
+
+                      onClick={() =>
+                        openConversation(
+                          conversation.conversation_id
+                        )
                       }
 
                     >
 
-                      <div>
+
+                      <span className="chat-title">
+
+                        {conversation.title}
+
+                      </span>
+
+
+                      <button
+
+                        className="delete-btn"
+
+                        onClick={event => {
+
+                          event.stopPropagation();
+
+                          handleDeleteChat(
+                            conversation.conversation_id
+                          );
+
+                        }}
+
+                        title="Delete conversation"
+
+                      >
+
+                        🗑
+
+                      </button>
+
+
+                    </div>
+
+                  )
+
+                )
+
+              )}
+
+            </div>
+
+          </aside>
+
+
+          {/* ================= MAIN ================= */}
+
+          <main className="main">
+
+
+            {/* HEADER */}
+
+            <header className="header">
+
+              <div className="header-title">
+                Company AI Assistant
+              </div>
+
+
+              <div className="connection-status">
+
+                <span className="status-dot"></span>
+
+                Backend connected
+
+              </div>
+
+            </header>
+
+
+            {activeId ? (
+
+              <>
+
+
+                {/* ================= RAG KNOWLEDGE BAR ================= */}
+
+                <div className="document-bar">
+
+                  <div className="knowledge-label">
+
+                    📚 Company Knowledge Base
+
+                  </div>
+
+
+                  <div className="document-count">
+
+                    4 policies loaded
+
+                  </div>
+
+                </div>
+
+
+                {/* ================= MESSAGES ================= */}
+
+                <div className="messages">
+
+
+                  {messages.length === 0 ? (
+
+                    <div className="empty-state">
+
+
+                      <div className="empty-icon">
+                        ✦
+                      </div>
+
+
+                      <div className="empty-title">
+
+                        How can I help you?
+
+                      </div>
+
+
+                      <div className="empty-description">
+
+                        Ask questions about company
+                        policies, HR, finance, IT
+                        security, and compliance.
+
+                      </div>
+
+
+                    </div>
+
+                  ) : (
+
+                    messages.map(
+                      (message, index) => (
 
                         <div
-                          className={
-                            "message-label"
-                          }
-                        >
 
-                          {message.role ===
-                          "user"
-                            ? "You"
-                            : "Company Assistant"}
-
-                        </div>
-
-
-                        <div
+                          key={index}
 
                           className={
-                            "message " +
+                            "message-row " +
                             message.role
                           }
 
                         >
 
-                          {message.content}
+
+                          <div>
+
+
+                            <div
+                              className={
+                                "message-label"
+                              }
+                            >
+
+                              {
+                                message.role ===
+                                "user"
+                                  ? "You"
+                                  : "Company Assistant"
+                              }
+
+                            </div>
+
+
+                            <div
+
+                              className={
+                                "message " +
+                                message.role
+                              }
+
+                            >
+
+                              {message.content}
+
+                            </div>
+
+
+                          </div>
+
 
                         </div>
 
-                      </div>
+                      )
 
-                    </div>
-
-                  )
-                )
-
-              )}
-
-
-              <div ref={messagesEndRef} />
-
-            </div>
-
-
-            {/* INPUT */}
-
-            <div className="input-area">
-
-              <div className="input-wrapper">
-
-                <input
-
-                  className="message-input"
-
-                  value={input}
-
-                  onChange={e =>
-                    setInput(
-                      e.target.value
                     )
-                  }
 
-                  onKeyDown={e => {
-
-                    if (
-                      e.key === "Enter" &&
-                      !e.shiftKey
-                    ) {
-
-                      e.preventDefault();
-
-                      handleSend();
-
-                    }
-
-                  }}
-
-                  placeholder={
-                    sending
-                      ? "Assistant is thinking..."
-                      : "Ask something about the company..."
-                  }
-
-                  disabled={sending}
-
-                />
+                  )}
 
 
-                <button
+                  <div ref={messagesEndRef} />
 
-                  className="send-btn"
+                </div>
 
-                  onClick={handleSend}
 
-                  disabled={
-                    sending ||
-                    !input.trim()
-                  }
+                {/* ================= INPUT ================= */}
 
-                  title="Send message"
+                <div className="input-area">
 
-                >
 
-                  {sending
-                    ? "..."
-                    : "↑"}
+                  <div className="input-wrapper">
 
-                </button>
+
+                    <input
+
+                      className="message-input"
+
+                      value={input}
+
+                      onChange={e =>
+                        setInput(
+                          e.target.value
+                        )
+                      }
+
+
+                      onKeyDown={e => {
+
+                        if (
+                          e.key === "Enter" &&
+                          !e.shiftKey
+                        ) {
+
+                          e.preventDefault();
+
+                          handleSend();
+
+                        }
+
+                      }}
+
+
+                      placeholder={
+                        sending
+                          ? "Assistant is thinking..."
+                          : "Ask something about the company..."
+                      }
+
+
+                      disabled={sending}
+
+                    />
+
+
+                    <button
+
+                      className="send-btn"
+
+                      onClick={handleSend}
+
+                      disabled={
+                        sending ||
+                        !input.trim()
+                      }
+
+                      title="Send message"
+
+                    >
+
+                      {
+                        sending
+                          ? "..."
+                          : "↑"
+                      }
+
+                    </button>
+
+
+                  </div>
+
+
+                  <div className="input-hint">
+
+                    Press Enter to send
+
+                  </div>
+
+
+                </div>
+
+
+              </>
+
+            ) : (
+
+
+              /* ================= WELCOME SCREEN ================= */
+
+              <div className="empty-state">
+
+
+                <div className="empty-icon">
+                  ✦
+                </div>
+
+
+                <div className="empty-title">
+
+                  Welcome to Company Assistant
+
+                </div>
+
+
+                <div className="empty-description">
+
+                  Start a new conversation to ask
+                  questions about company policies
+                  and procedures.
+
+                </div>
+
 
               </div>
 
-
-              <div className="input-hint">
-
-                Press Enter to send
-
-              </div>
-
-            </div>
-
-          </>
-
-        ) : (
-
-          <div className="empty-state">
-
-            <div className="empty-icon">
-              ✦
-            </div>
-
-            <div className="empty-title">
-              Welcome to Company Assistant
-            </div>
-
-            <div className="empty-description">
-
-              Start a new conversation to ask questions,
-              use company knowledge, and upload documents.
-
-            </div>
-
-          </div>
-
-        )}
-
-      </main>
-
-    </div>
-
-  );
-
-}
+            )}
 
 
-ReactDOM
-  .createRoot(
-    document.getElementById("root")
-  )
-  .render(
-    <App />
-  );
+          </main>
 
-</script>
+
+        </div>
+
+      );
+
+    }
+
+
+    // --------------------------------------------------
+    // START REACT APPLICATION
+    // --------------------------------------------------
+
+    ReactDOM
+      .createRoot(
+        document.getElementById("root")
+      )
+      .render(
+        <App />
+      );
+
+  </script>
 
 </body>
 

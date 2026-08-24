@@ -52,7 +52,7 @@ response = client.chat.completions.create(
             "content": "Say hello in one short sentence."
         }
     ],
-    max_tokens=50,
+    max_tokens=500,
 )
 
 

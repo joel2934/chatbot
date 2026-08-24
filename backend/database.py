@@ -188,11 +188,24 @@ def get_messages(conversation_id: str, limit: int | None = None) -> list:
 
 def delete_conversation(conversation_id: str):
     conn = get_conn()
+
+    # Delete documents associated with the conversation first
     conn.execute(
-        "DELETE FROM messages WHERE conversation_id = ?", (conversation_id,)
+        "DELETE FROM documents WHERE conversation_id = ?",
+        (conversation_id,)
     )
+
+    # Delete messages associated with the conversation
     conn.execute(
-        "DELETE FROM conversations WHERE conversation_id = ?", (conversation_id,)
+        "DELETE FROM messages WHERE conversation_id = ?",
+        (conversation_id,)
     )
+
+    # Finally delete the conversation
+    conn.execute(
+        "DELETE FROM conversations WHERE conversation_id = ?",
+        (conversation_id,)
+    )
+
     conn.commit()
     conn.close()
